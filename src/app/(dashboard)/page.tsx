@@ -211,7 +211,7 @@ export default function DashboardPage() {
                   {citasHoy.slice(0, 5).map((cita) => (
                     <div
                       key={cita.cita_id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{cita.paciente_nombre}</p>
@@ -219,8 +219,8 @@ export default function DashboardPage() {
                           {cita.motivo} • {cita.doctor_nombre}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-sm font-medium">
+                      <div className="flex items-center gap-2 sm:ml-4 w-full sm:w-auto justify-between sm:justify-end">
+                        <span className="text-sm font-medium whitespace-nowrap">
                           {new Date(cita.fecha_hora).toLocaleTimeString('es', { 
                             hour: '2-digit', 
                             minute: '2-digit' 
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                   {facturasPendientes.slice(0, 5).map((factura) => (
                     <div
                       key={factura.factura_id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{factura.paciente_nombre}</p>
@@ -272,8 +272,8 @@ export default function DashboardPage() {
                           {factura.dias_pendiente} días pendiente
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-lg font-bold text-amber-600">
+                      <div className="flex items-center gap-2 sm:ml-4 w-full sm:w-auto justify-between sm:justify-end">
+                        <span className="text-lg font-bold text-amber-600 whitespace-nowrap">
                           ${factura.monto_total?.toFixed(2)}
                         </span>
                         <Badge variant={factura.estado_pago === 'Parcial' ? 'secondary' : 'outline'}>
