@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,28 +10,47 @@ import {
   DollarSign,
   Clock,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import type { VwCitasHoy, VwFacturasPendientes, VwIngresosMensuales } from '@/types/database';
 
 export default function DashboardPage() {
   const [citasHoy, setCitasHoy] = useState<VwCitasHoy[]>([]);
+  const [citasAlert, setCitasAlert] = useState<VwCitasHoy[]>([]);
   const [facturasPendientes, setFacturasPendientes] = useState<VwFacturasPendientes[]>([]);
   const [ingresos, setIngresos] = useState<VwIngresosMensuales[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<'day' | 'week'>('day');
+
+  const fetchCitas = useCallback(
+    async (currentRange: 'day' | 'week') => {
+      const res = await fetch(`/api/views/citas-hoy?range=${currentRange}`);
+      if (res.ok) setCitasHoy(await res.json());
+    },
+    []
+  );
+
+  const fetchCitasAlert = useCallback(async () => {
+    const res = await fetch('/api/views/citas-hoy?range=day');
+    if (res.ok) {
+      const data: VwCitasHoy[] = await res.json();
+      setCitasAlert(data.filter((c) => c.estado !== 'Completada'));
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [citasRes, facturasRes, ingresosRes] = await Promise.all([
-          fetch('/api/views/citas-hoy'),
+        const [facturasRes, ingresosRes] = await Promise.all([
           fetch('/api/views/facturas-pendientes'),
           fetch('/api/views/ingresos-mensuales')
         ]);
 
-        if (citasRes.ok) setCitasHoy(await citasRes.json());
         if (facturasRes.ok) setFacturasPendientes(await facturasRes.json());
         if (ingresosRes.ok) setIngresos(await ingresosRes.json());
+        await fetchCitas(range);
+        await fetchCitasAlert();
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -40,7 +59,12 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, []);
+  }, [fetchCitas, fetchCitasAlert, range]);
+
+  // Cambiar rango de citas
+  useEffect(() => {
+    fetchCitas(range);
+  }, [fetchCitas, range]);
 
   const mesActual = ingresos[0];
   const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.monto_total || 0), 0);
@@ -53,12 +77,38 @@ export default function DashboardPage() {
       />
       
       <div className="p-6 space-y-6">
+        {/* Alerta de citas del día pendientes */}
+        {citasAlert.length > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
+            <Bell className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <p className="font-medium text-amber-900">
+                Tienes {citasAlert.length} cita(s) hoy sin completar
+              </p>
+              <div className="flex flex-wrap gap-2 text-sm text-amber-800">
+                {citasAlert.slice(0, 3).map((cita) => (
+                  <span key={cita.cita_id} className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 border border-amber-200">
+                    <strong>{new Date(cita.fecha_hora).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</strong>
+                    · {cita.paciente_nombre}
+                    {cita.doctor_nombre ? ` · ${cita.doctor_nombre}` : ''}
+                  </span>
+                ))}
+                {citasAlert.length > 3 && (
+                  <span className="text-xs text-amber-700">
+                    +{citasAlert.length - 3} más
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Citas Hoy
+                Citas ({range === 'day' ? 'Hoy' : 'Semana'})
               </CardTitle>
               <Calendar className="h-4 w-4 text-primary" />
             </CardHeader>
@@ -127,10 +177,23 @@ export default function DashboardPage() {
           {/* Citas de Hoy */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                Citas de Hoy
-              </CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  {range === 'day' ? 'Citas de Hoy' : 'Citas de la Semana'}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">Rango</span>
+                  <select
+                    className="border rounded px-2 py-1 text-sm bg-background"
+                    value={range}
+                    onChange={(e) => setRange(e.target.value as 'day' | 'week')}
+                  >
+                    <option value="day">Hoy</option>
+                    <option value="week">Semana</option>
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
