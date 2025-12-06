@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,19 +19,27 @@ export default function DashboardPage() {
   const [facturasPendientes, setFacturasPendientes] = useState<VwFacturasPendientes[]>([]);
   const [ingresos, setIngresos] = useState<VwIngresosMensuales[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<'day' | 'week'>('day');
+
+  const fetchCitas = useCallback(
+    async (currentRange: 'day' | 'week') => {
+      const res = await fetch(`/api/views/citas-hoy?range=${currentRange}`);
+      if (res.ok) setCitasHoy(await res.json());
+    },
+    []
+  );
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [citasRes, facturasRes, ingresosRes] = await Promise.all([
-          fetch('/api/views/citas-hoy'),
+        const [facturasRes, ingresosRes] = await Promise.all([
           fetch('/api/views/facturas-pendientes'),
           fetch('/api/views/ingresos-mensuales')
         ]);
 
-        if (citasRes.ok) setCitasHoy(await citasRes.json());
         if (facturasRes.ok) setFacturasPendientes(await facturasRes.json());
         if (ingresosRes.ok) setIngresos(await ingresosRes.json());
+        await fetchCitas(range);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -40,7 +48,12 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, []);
+  }, [fetchCitas, range]);
+
+  // Cambiar rango de citas
+  useEffect(() => {
+    fetchCitas(range);
+  }, [fetchCitas, range]);
 
   const mesActual = ingresos[0];
   const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.monto_total || 0), 0);
@@ -58,7 +71,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Citas Hoy
+                Citas ({range === 'day' ? 'Hoy' : 'Semana'})
               </CardTitle>
               <Calendar className="h-4 w-4 text-primary" />
             </CardHeader>
@@ -127,10 +140,23 @@ export default function DashboardPage() {
           {/* Citas de Hoy */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                Citas de Hoy
-              </CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  {range === 'day' ? 'Citas de Hoy' : 'Citas de la Semana'}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">Rango</span>
+                  <select
+                    className="border rounded px-2 py-1 text-sm bg-background"
+                    value={range}
+                    onChange={(e) => setRange(e.target.value as 'day' | 'week')}
+                  >
+                    <option value="day">Hoy</option>
+                    <option value="week">Semana</option>
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
