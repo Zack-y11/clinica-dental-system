@@ -10,12 +10,14 @@ import {
   DollarSign,
   Clock,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import type { VwCitasHoy, VwFacturasPendientes, VwIngresosMensuales } from '@/types/database';
 
 export default function DashboardPage() {
   const [citasHoy, setCitasHoy] = useState<VwCitasHoy[]>([]);
+  const [citasAlert, setCitasAlert] = useState<VwCitasHoy[]>([]);
   const [facturasPendientes, setFacturasPendientes] = useState<VwFacturasPendientes[]>([]);
   const [ingresos, setIngresos] = useState<VwIngresosMensuales[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,14 @@ export default function DashboardPage() {
     []
   );
 
+  const fetchCitasAlert = useCallback(async () => {
+    const res = await fetch('/api/views/citas-hoy?range=day');
+    if (res.ok) {
+      const data: VwCitasHoy[] = await res.json();
+      setCitasAlert(data.filter((c) => c.estado !== 'Completada'));
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -40,6 +50,7 @@ export default function DashboardPage() {
         if (facturasRes.ok) setFacturasPendientes(await facturasRes.json());
         if (ingresosRes.ok) setIngresos(await ingresosRes.json());
         await fetchCitas(range);
+        await fetchCitasAlert();
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -48,7 +59,7 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, [fetchCitas, range]);
+  }, [fetchCitas, fetchCitasAlert, range]);
 
   // Cambiar rango de citas
   useEffect(() => {
@@ -66,6 +77,32 @@ export default function DashboardPage() {
       />
       
       <div className="p-6 space-y-6">
+        {/* Alerta de citas del día pendientes */}
+        {citasAlert.length > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
+            <Bell className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <p className="font-medium text-amber-900">
+                Tienes {citasAlert.length} cita(s) hoy sin completar
+              </p>
+              <div className="flex flex-wrap gap-2 text-sm text-amber-800">
+                {citasAlert.slice(0, 3).map((cita) => (
+                  <span key={cita.cita_id} className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 border border-amber-200">
+                    <strong>{new Date(cita.fecha_hora).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</strong>
+                    · {cita.paciente_nombre}
+                    {cita.doctor_nombre ? ` · ${cita.doctor_nombre}` : ''}
+                  </span>
+                ))}
+                {citasAlert.length > 3 && (
+                  <span className="text-xs text-amber-700">
+                    +{citasAlert.length - 3} más
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>

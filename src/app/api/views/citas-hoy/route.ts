@@ -9,11 +9,10 @@ export async function GET(request: NextRequest) {
   const range = (searchParams.get('range') as RangeType) || 'day';
 
   const today = new Date();
-  const start = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  const end =
-    range === 'week'
-      ? new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
-      : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  const start = new Date(today);
+  start.setHours(0, 0, 0, 0); // inicio local del día
+  const end = new Date(start);
+  end.setDate(end.getDate() + (range === 'week' ? 7 : 1)); // fin local
 
   const { data, error } = await supabase
     .from('citas')
