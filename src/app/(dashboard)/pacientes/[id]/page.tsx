@@ -291,3 +291,4 @@ export default function PacienteDetailPage({ params }: { params: Promise<{ id: s
   );
 }
 
+
