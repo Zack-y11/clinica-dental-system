@@ -6,6 +6,14 @@ import { Header } from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -26,6 +34,7 @@ import {
   FileText,
   Stethoscope
 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { 
   Paciente, 
   EstadoCuentaPaciente, 
@@ -41,6 +50,9 @@ export default function PacienteDetailPage({ params }: { params: Promise<{ id: s
   const [historial, setHistorial] = useState<VwHistorialTratamientos[]>([]);
   const [odontograma, setOdontograma] = useState<VwOdontogramaCompleto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTooth, setSelectedTooth] = useState<string>('');
+  const [selectedEstado, setSelectedEstado] = useState<string>('Sano');
+  const [savingOdo, setSavingOdo] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -102,6 +114,43 @@ export default function PacienteDetailPage({ params }: { params: Promise<{ id: s
     'Corona': 'bg-yellow-500',
     'Obturado': 'bg-blue-500',
     'Endodoncia': 'bg-purple-500',
+  };
+
+  const saveOdontograma = async () => {
+    if (!selectedTooth || !selectedEstado) {
+      toast.error('Selecciona un diente y un estado');
+      return;
+    }
+
+    setSavingOdo(true);
+    try {
+      const res = await fetch(
+        `/api/odontograma?paciente_id=${id}&diente_numero=${selectedTooth}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: selectedEstado }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'No se pudo guardar');
+      }
+
+      const refreshed = await fetch(`/api/views/odontograma-completo/${id}`);
+      if (refreshed.ok) {
+        setOdontograma(await refreshed.json());
+        toast.success('Odontograma actualizado');
+      } else {
+        toast.error('Guardado, pero no se pudo refrescar la vista');
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Error guardando odontograma');
+    } finally {
+      setSavingOdo(false);
+    }
   };
 
   return (
@@ -251,7 +300,7 @@ export default function PacienteDetailPage({ params }: { params: Promise<{ id: s
 
           <TabsContent value="odontograma">
             <Card>
-              <CardHeader>
+              <CardHeader className="space-y-4">
                 <div className="flex flex-wrap gap-4">
                   {Object.entries(estadoColores).map(([estado, color]) => (
                     <div key={estado} className="flex items-center gap-2">
@@ -259,6 +308,40 @@ export default function PacienteDetailPage({ params }: { params: Promise<{ id: s
                       <span className="text-sm">{estado}</span>
                     </div>
                   ))}
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-4 items-end">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Diente (número)</p>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={52}
+                      placeholder="Ej. 11 o 26"
+                      value={selectedTooth}
+                      onChange={(e) => setSelectedTooth(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Estado</p>
+                    <Select value={selectedEstado} onValueChange={setSelectedEstado}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(estadoColores).map((estado) => (
+                          <SelectItem key={estado} value={estado}>
+                            {estado}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2 flex md:justify-end">
+                    <Button onClick={saveOdontograma} disabled={savingOdo}>
+                      {savingOdo ? 'Guardando...' : 'Guardar / Actualizar diente'}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

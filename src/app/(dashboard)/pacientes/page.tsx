@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { Header } from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Search, User, Phone, Mail } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, User, Phone, Mail, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Paciente, PacienteInsert } from '@/types/database';
 
@@ -292,10 +293,13 @@ export default function PacientesPage() {
                               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                                 <User className="h-5 w-5 text-primary" />
                               </div>
-                              <div>
-                                <p className="font-medium">
+                              <div className="space-y-0.5">
+                                <Link
+                                  href={`/pacientes/${paciente.id}`}
+                                  className="font-medium hover:underline"
+                                >
                                   {paciente.nombres} {paciente.apellidos}
-                                </p>
+                                </Link>
                                 {paciente.fecha_nacimiento && (
                                   <p className="text-sm text-muted-foreground">
                                     {new Date(paciente.fecha_nacimiento).toLocaleDateString('es')}
@@ -332,6 +336,16 @@ export default function PacientesPage() {
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                title="Ver ficha"
+                              >
+                                <Link href={`/pacientes/${paciente.id}`}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleEdit(paciente)}
@@ -358,16 +372,19 @@ export default function PacientesPage() {
                   {filteredPacientes.map((paciente) => (
                     <div
                       key={paciente.id}
-                      className="rounded-lg border bg-muted/40 p-4 space-y-3"
+                      className="rounded-lg border bg-muted/40 p-4 space-y-3 hover:border-primary/50 transition-colors"
                     >
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div className="min-w-0 space-y-1">
-                          <p className="font-semibold leading-tight">
+                          <Link
+                            href={`/pacientes/${paciente.id}`}
+                            className="font-semibold leading-tight hover:underline"
+                          >
                             {paciente.nombres} {paciente.apellidos}
-                          </p>
+                          </Link>
                           {paciente.fecha_nacimiento && (
                             <p className="text-xs text-muted-foreground">
                               {new Date(paciente.fecha_nacimiento).toLocaleDateString('es')}
@@ -391,6 +408,12 @@ export default function PacientesPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 justify-end">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/pacientes/${paciente.id}`}>
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Ver ficha
+                          </Link>
+                        </Button>
                         <Button variant="secondary" size="sm" onClick={() => handleEdit(paciente)}>
                           <Pencil className="h-4 w-4 mr-1" />
                           Editar
